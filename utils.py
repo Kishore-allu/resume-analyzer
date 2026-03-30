@@ -9,6 +9,7 @@ nltk.download('stopwords')
 
 stop_words = set(stopwords.words('english'))
 
+# Extract text from PDF
 def extract_text_from_pdf(file):
     text = ""
     with pdfplumber.open(file) as pdf:
@@ -18,6 +19,7 @@ def extract_text_from_pdf(file):
                 text += page_text
     return text
 
+# Clean text
 def clean_text(text):
     text = re.sub(r'\W', ' ', text)
     text = text.lower()
@@ -25,18 +27,21 @@ def clean_text(text):
     words = [w for w in words if w not in stop_words]
     return " ".join(words)
 
+# Calculate similarity
 def calculate_similarity(resume, job_desc):
     vectorizer = TfidfVectorizer()
     vectors = vectorizer.fit_transform([resume, job_desc])
     similarity = cosine_similarity(vectors[0], vectors[1])
     return round(similarity[0][0] * 100, 2)
 
+# Missing keywords
 def get_missing_keywords(resume, job_desc):
     resume_words = set(resume.split())
     jd_words = set(job_desc.split())
     missing = jd_words - resume_words
     return list(missing)[:20]
 
+# ATS score
 def calculate_ats_score(similarity_score, missing_keywords):
     score = similarity_score
     penalty = len(missing_keywords) * 2
@@ -48,3 +53,10 @@ def calculate_ats_score(similarity_score, missing_keywords):
         final_score = 100
 
     return round(final_score, 2)
+
+# 🔥 NEW FEATURE: Suggestions
+def generate_suggestions(missing_keywords):
+    suggestions = []
+    for word in missing_keywords[:10]:
+        suggestions.append(f"👉 Consider adding '{word}' in your resume")
+    return suggestions
