@@ -1,58 +1,55 @@
-import re
+import PyPDF2
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+
+def extract_text_from_pdf(file):
+    pdf_reader = PyPDF2.PdfReader(file)
+    text = ""
+    for page in pdf_reader.pages:
+        text += page.extract_text()
+    return text
+
 
 def clean_text(text):
-    text = re.sub(r'\s+', ' ', text)
     return text.lower()
 
-def calculate_match_score(resume, job_desc):
+
+def calculate_similarity(resume, job_desc):
+    cv = CountVectorizer()
+    matrix = cv.fit_transform([resume, job_desc])
+    similarity = cosine_similarity(matrix)[0][1]
+    return similarity
+
+
+def get_missing_keywords(resume, job_desc):
     resume_words = set(resume.split())
     job_words = set(job_desc.split())
-
-    matched = resume_words.intersection(job_words)
-    score = len(matched) / len(job_words) * 100 if job_words else 0
-
     missing = job_words - resume_words
+    return list(missing)
 
-    return score, list(missing)
 
 def generate_suggestions(missing_keywords):
     suggestions = []
-
     for word in missing_keywords:
         if word == "teamwork":
-            suggestions.append("Mention teamwork experience like: 'Collaborated with cross-functional teams to complete projects'")
-        
+            suggestions.append("Collaborated with cross-functional teams to complete projects")
         elif word == "communication":
-            suggestions.append("Add communication skills like: 'Effectively communicated ideas with team members and stakeholders'")
-        
+            suggestions.append("Effectively communicated ideas with team members and stakeholders")
         elif word == "leadership":
-            suggestions.append("Include leadership experience like: 'Led a team or managed responsibilities in projects'")
-        
+            suggestions.append("Led a team or managed responsibilities in projects")
         else:
-            suggestions.append(f"Try including the keyword '{word}' naturally in your resume")
-
+            suggestions.append(f"Include the keyword '{word}' naturally in your resume")
     return suggestions
 
-    for word in missing_keywords:
-        if word in smart_map:
-            suggestions.append(f"👉 Improve '{word}' by adding:")
-            for line in smart_map[word]:
-                suggestions.append(f"   - {line}")
-        else:
-            suggestions.append(f"👉 Consider including '{word}' in your resume")
 
-    return suggestions
-
-def highlight_text(resume, job_desc):
-    resume_words = resume.split()
-    job_words = set(job_desc.split())
-
-    highlighted = []
-
-    for word in resume_words:
-        if word in job_words:
-            highlighted.append(f"<span style='color:#00ffcc'>{word}</span>")
-        else:
-            highlighted.append(word)
-
-    return " ".join(highlighted)
+def generate_summary(resume_text):
+    sentences = resume_text.split('.')
+    summary = []
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if len(sentence) > 40:
+            summary.append(sentence)
+        if len(summary) == 5:
+            break
+    return summary
