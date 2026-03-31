@@ -1,57 +1,63 @@
-import streamlit as st
 import PyPDF2
-import re
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+import docx
 
-
-def extract_text_from_pdf(file):
-    pdf_reader = PyPDF2.PdfReader(file)
+# ---------- EXTRACT TEXT ----------
+def extract_text(file):
     text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text()
-    return text
 
+    if file.name.endswith(".pdf"):
+        pdf = PyPDF2.PdfReader(file)
+        for page in pdf.pages:
+            text += page.extract_text() or ""
 
-def clean_text(text):
+    elif file.name.endswith(".docx"):
+        doc = docx.Document(file)
+        for para in doc.paragraphs:
+            text += para.text + " "
+
     return text.lower()
 
 
-def calculate_similarity(resume, job_desc):
-    cv = CountVectorizer()
-    matrix = cv.fit_transform([resume, job_desc])
-    similarity = cosine_similarity(matrix)[0][1]
-    return similarity
+# ---------- SCORE ----------
+def calculate_score(resume, job_desc):
+    job_words = job_desc.lower().split()
+    resume_words = resume.split()
+
+    match = 0
+    for word in job_words:
+        if word in resume_words:
+            match += 1
+
+    if len(job_words) == 0:
+        return 0
+
+    return (match / len(job_words)) * 100
 
 
+# ---------- MISSING ----------
 def get_missing_keywords(resume, job_desc):
+    job_words = set(job_desc.lower().split())
     resume_words = set(resume.split())
-    job_words = set(job_desc.split())
+
     missing = job_words - resume_words
-    return list(missing)
+
+    ignore = {"and", "or", "the", "a", "to", "for", "with", "in"}
+
+    result = []
+    for word in missing:
+        if word not in ignore:
+            result.append(word)
+
+    return result
 
 
-def generate_suggestions(missing_keywords):
-    suggestions = []
-    for word in missing_keywords:
-        if word == "teamwork":
-            suggestions.append("Collaborated with cross-functional teams to complete projects")
-        elif word == "communication":
-            suggestions.append("Effectively communicated ideas with team members and stakeholders")
-        elif word == "leadership":
-            suggestions.append("Led a team or managed responsibilities in projects")
-        else:
-            suggestions.append(f"Include the keyword '{word}' naturally in your resume")
-    return suggestions
-
-
-def generate_summary(resume_text):
-    sentences = resume_text.split('.')
+# ---------- SUMMARY ----------
+def get_summary(text):
+    lines = text.split(".")
     summary = []
-    for sentence in sentences:
-        sentence = sentence.strip()
-        if len(sentence) > 40:
-            summary.append(sentence)
-        if len(summary) == 5:
-            break
-    return summary
+
+    for line in lines:
+        if len(line.strip()) > 30:
+            summary.append(line.strip())
+
+    return summary[:5]

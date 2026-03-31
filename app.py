@@ -1,63 +1,91 @@
 import streamlit as st
-from utils import (
-    extract_text_from_pdf,
-    clean_text,
-    calculate_similarity,
-    get_missing_keywords,
-    generate_suggestions,
-    generate_summary
-)
+from utils import extract_text, calculate_score, get_missing_keywords, get_summary
 
 st.set_page_config(page_title="AI Resume Analyzer", layout="wide")
 
+# ---------- STYLE ----------
 st.markdown("""
 <style>
-.stApp { background-color: #0d1117; color: white; }
-h1 { color: #00ffaa; }
-h2, h3 { color: #58a6ff; }
-.stButton>button { background-color: #00ffaa; color: black; border-radius: 10px; font-weight: bold; }
-.stTextArea textarea { background-color: #161b22; color: white; }
-.stFileUploader { background-color: #161b22; }
+body {
+    background-color: #0e1117;
+    color: white;
+}
+.stButton>button {
+    background-color: #00c896;
+    color: black;
+    border-radius: 8px;
+    padding: 10px 20px;
+}
 </style>
 """, unsafe_allow_html=True)
 
+# ---------- TITLE ----------
 st.title("AI Resume Analyzer")
 
-uploaded_file = st.file_uploader("Upload Resume (PDF)", type=["pdf"])
-job_description = st.text_area("Paste Job Description")
+# ---------- FILE ----------
+uploaded_file = st.file_uploader(
+    "Upload Resume (PDF or DOCX)",
+    type=["pdf", "docx"]
+)
 
+# ---------- JOB DESC ----------
+job_desc = st.text_area("Paste Job Description")
+
+# ---------- BUTTON ----------
 if st.button("Analyze Resume"):
 
-    if uploaded_file is not None and job_description.strip() != "":
-        resume_text = extract_text_from_pdf(uploaded_file)
-        cleaned_resume = clean_text(resume_text)
-        cleaned_job = clean_text(job_description)
-        score = calculate_similarity(cleaned_resume, cleaned_job)
-        missing_keywords = get_missing_keywords(cleaned_resume, cleaned_job)
-        suggestions = generate_suggestions(missing_keywords)
-        summary_points = generate_summary(cleaned_resume)
-        
+    if uploaded_file is not None and job_desc != "":
+
+        resume_text = extract_text(uploaded_file)
+
+        score = calculate_score(resume_text, job_desc)
+        missing = get_missing_keywords(resume_text, job_desc)
+        summary = get_summary(resume_text)
+
+        # ---------- SCORES ----------
         st.subheader("Match Score")
-        st.progress(score)
-        st.markdown(f"### {score*100:.2f}%")
-        
+        st.progress(score / 100)
+        st.write(f"{score:.2f}%")
+
         st.subheader("ATS Score")
-        st.progress(score)
-        st.markdown(f"### {score*100:.2f} / 100")
-        
+        st.progress(score / 100)
+        st.write(f"{score:.2f} / 100")
+
+        # ---------- MISSING ----------
         st.subheader("Missing Keywords")
-        if missing_keywords:
-            for word in missing_keywords[:10]:
-                st.markdown(f"• {word}")
-        else:
-            st.success("No missing keywords found!")
-        
+        for word in missing:
+            st.write(f"• {word}")
+
+        # ---------- SUGGESTIONS ----------
         st.subheader("Suggestions to Improve Resume")
-        for s in suggestions[:5]:
-            st.markdown(f"• {s}")
-        
+        for word in missing:
+            st.write(f"• Include the keyword '{word}' naturally in your resume")
+
+        # ---------- SUMMARY ----------
         st.subheader("Quick Resume Summary")
-        for point in summary_points:
-            st.markdown(f"• {point}")
+        for point in summary:
+            st.write(f"• {point}")
+
+        # ---------- DOWNLOAD ----------
+        report = f"""
+AI Resume Analysis Report
+
+Match Score: {score:.2f}%
+ATS Score: {score:.2f}/100
+
+Missing Keywords:
+{', '.join(missing)}
+
+Summary:
+{chr(10).join(summary)}
+        """
+
+        st.download_button(
+            label="Download Report",
+            data=report,
+            file_name="resume_report.txt",
+            mime="text/plain"
+        )
+
     else:
-        st.warning("Please upload resume and paste job description")
+        st.warning("Please upload resume and enter job description")
