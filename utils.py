@@ -18,28 +18,20 @@ def calculate_match_score(resume, job_desc):
 def generate_suggestions(missing_keywords):
     suggestions = []
 
-    smart_map = {
-        "teamwork": [
-            "Collaborated with cross-functional teams",
-            "Worked effectively in team environments"
-        ],
-        "communication": [
-            "Demonstrated strong verbal and written communication",
-            "Presented ideas clearly to stakeholders"
-        ],
-        "leadership": [
-            "Led a team/project successfully",
-            "Took initiative in key decisions"
-        ],
-        "python": [
-            "Built projects using Python",
-            "Worked on automation scripts using Python"
-        ],
-        "management": [
-            "Managed project timelines and deliverables",
-            "Handled multiple tasks efficiently"
-        ]
-    }
+    for word in missing_keywords:
+        if word == "teamwork":
+            suggestions.append("Mention teamwork experience like: 'Collaborated with cross-functional teams to complete projects'")
+        
+        elif word == "communication":
+            suggestions.append("Add communication skills like: 'Effectively communicated ideas with team members and stakeholders'")
+        
+        elif word == "leadership":
+            suggestions.append("Include leadership experience like: 'Led a team or managed responsibilities in projects'")
+        
+        else:
+            suggestions.append(f"Try including the keyword '{word}' naturally in your resume")
+
+    return suggestions
 
     for word in missing_keywords:
         if word in smart_map:
