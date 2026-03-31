@@ -119,3 +119,26 @@ if analyze:
 
     else:
         st.warning("⚠️ Please upload resume and paste job description.")
+        # ------------------ DOWNLOAD REPORT ------------------
+
+report = f"""
+AI Resume Analysis Report
+
+Match Score: {score:.2f}%
+ATS Score: {ats_score:.2f}/100
+
+Missing Keywords:
+{', '.join(missing)}
+
+Suggestions:
+"""
+
+for s in suggestions:
+    report += f"\n{s}"
+
+st.download_button(
+    label="📥 Download Report",
+    data=report,
+    file_name="resume_analysis.txt",
+    mime="text/plain"
+)
