@@ -1,60 +1,121 @@
 import streamlit as st
-from utils import (
-    extract_text_from_pdf,
-    clean_text,
-    calculate_similarity,
-    get_missing_keywords,
-    calculate_ats_score,
-    generate_suggestions
-)
+import PyPDF2
+from utils import clean_text, calculate_match_score, generate_suggestions, highlight_text
 
+# ------------------ PAGE CONFIG ------------------
 st.set_page_config(page_title="AI Resume Analyzer", layout="wide")
 
-st.title("📄 AI Resume Analyzer 💼")
-st.write("Upload your resume and compare it with a job description")
+# ------------------ CUSTOM CSS ------------------
+st.markdown("""
+<style>
+body {
+    background-color: #0e1117;
+    color: white;
+}
 
-uploaded_file = st.file_uploader("📤 Upload your resume (PDF)", type="pdf")
-job_desc = st.text_area("📝 Paste Job Description")
+.big-title {
+    font-size: 40px;
+    font-weight: bold;
+    color: #00ffcc;
+}
 
-# 🔥 NEW: Button
-if st.button("🚀 Analyze Resume"):
+.section {
+    background-color: #1c1f26;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
 
-    if uploaded_file and job_desc:
+.highlight-box {
+    padding: 15px;
+    border-radius: 10px;
+    background: #111;
+}
+
+.stButton>button {
+    background-color: #00ffcc;
+    color: black;
+    border-radius: 8px;
+    font-weight: bold;
+    padding: 10px 20px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ------------------ TITLE ------------------
+st.markdown("<div class='big-title'>📄 AI Resume Analyzer 🚀</div>", unsafe_allow_html=True)
+
+# ------------------ FILE UPLOAD ------------------
+st.markdown("### 📤 Upload your Resume")
+uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
+
+# ------------------ JOB DESCRIPTION ------------------
+st.markdown("### 📝 Paste Job Description")
+job_description = st.text_area("Enter job description here...")
+
+# ------------------ BUTTON ------------------
+analyze = st.button("🚀 Analyze Resume")
+
+# ------------------ FUNCTION ------------------
+def extract_text_from_pdf(file):
+    reader = PyPDF2.PdfReader(file)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text()
+    return text
+
+# ------------------ MAIN LOGIC ------------------
+if analyze:
+    if uploaded_file is not None and job_description:
 
         resume_text = extract_text_from_pdf(uploaded_file)
 
-        cleaned_resume = clean_text(resume_text)
-        cleaned_jd = clean_text(job_desc)
+        clean_resume = clean_text(resume_text)
+        clean_job = clean_text(job_description)
 
-        score = calculate_similarity(cleaned_resume, cleaned_jd)
-        missing_skills = get_missing_keywords(cleaned_resume, cleaned_jd)
-        ats_score = calculate_ats_score(score, missing_skills)
+        score, missing = calculate_match_score(clean_resume, clean_job)
 
-        col1, col2 = st.columns(2)
+        # ------------------ SCORES ------------------
+        st.markdown("<div class='section'>", unsafe_allow_html=True)
+        st.subheader("📊 Match Score")
+        st.progress(int(score))
+        st.write(f"### {score:.2f}%")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        with col1:
-            st.subheader("📊 Match Score")
-            st.success(f"{score}%")
+        # ------------------ ATS SCORE ------------------
+        ats_score = score * 0.8
+        st.markdown("<div class='section'>", unsafe_allow_html=True)
+        st.subheader("⭐ ATS Score")
+        st.progress(int(ats_score))
+        st.write(f"### {ats_score:.2f} / 100")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-            st.subheader("⭐ ATS Score")
-            st.success(f"{ats_score} / 100")
+        # ------------------ MISSING KEYWORDS ------------------
+        st.markdown("<div class='section'>", unsafe_allow_html=True)
+        st.subheader("❌ Missing Keywords")
+        st.write(missing)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        with col2:
-            st.subheader("❌ Missing Keywords")
-            st.warning(missing_skills)
+        # ------------------ SUGGESTIONS ------------------
+        st.markdown("<div class='section'>", unsafe_allow_html=True)
+        st.subheader("💡 Smart Suggestions")
 
-        # Suggestions
-        suggestions = generate_suggestions(missing_skills)
+        suggestions = generate_suggestions(missing)
 
-        st.subheader("💡 Suggestions to Improve Resume")
         for s in suggestions:
             st.write(s)
 
-        with st.expander("📄 View Original Resume Text"):
-            st.write(resume_text)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        with st.expander("🧹 View Cleaned Resume Text"):
-            st.write(cleaned_resume)
+        # ------------------ HIGHLIGHTED RESUME ------------------
+        st.markdown("<div class='section'>", unsafe_allow_html=True)
+        st.subheader("📄 Resume with Highlights")
+
+        highlighted_resume = highlight_text(clean_resume, clean_job)
+
+        st.markdown(highlighted_resume, unsafe_allow_html=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
     else:
-        st.error("⚠️ Please upload resume and paste job description")
+        st.warning("⚠️ Please upload resume and paste job description.")

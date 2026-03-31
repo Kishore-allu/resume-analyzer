@@ -1,62 +1,66 @@
-import pdfplumber
 import re
-import nltk
-from nltk.corpus import stopwords
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
-nltk.download('stopwords')
-
-stop_words = set(stopwords.words('english'))
-
-# Extract text from PDF
-def extract_text_from_pdf(file):
-    text = ""
-    with pdfplumber.open(file) as pdf:
-        for page in pdf.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text
-    return text
-
-# Clean text
 def clean_text(text):
-    text = re.sub(r'\W', ' ', text)
-    text = text.lower()
-    words = text.split()
-    words = [w for w in words if w not in stop_words]
-    return " ".join(words)
+    text = re.sub(r'\s+', ' ', text)
+    return text.lower()
 
-# Calculate similarity
-def calculate_similarity(resume, job_desc):
-    vectorizer = TfidfVectorizer()
-    vectors = vectorizer.fit_transform([resume, job_desc])
-    similarity = cosine_similarity(vectors[0], vectors[1])
-    return round(similarity[0][0] * 100, 2)
-
-# Missing keywords
-def get_missing_keywords(resume, job_desc):
+def calculate_match_score(resume, job_desc):
     resume_words = set(resume.split())
-    jd_words = set(job_desc.split())
-    missing = jd_words - resume_words
-    return list(missing)[:20]
+    job_words = set(job_desc.split())
 
-# ATS score
-def calculate_ats_score(similarity_score, missing_keywords):
-    score = similarity_score
-    penalty = len(missing_keywords) * 2
-    final_score = score - penalty
+    matched = resume_words.intersection(job_words)
+    score = len(matched) / len(job_words) * 100 if job_words else 0
 
-    if final_score < 0:
-        final_score = 0
-    elif final_score > 100:
-        final_score = 100
+    missing = job_words - resume_words
 
-    return round(final_score, 2)
+    return score, list(missing)
 
-# 🔥 NEW FEATURE: Suggestions
 def generate_suggestions(missing_keywords):
     suggestions = []
-    for word in missing_keywords[:10]:
-        suggestions.append(f"👉 Consider adding '{word}' in your resume")
+
+    smart_map = {
+        "teamwork": [
+            "Collaborated with cross-functional teams",
+            "Worked effectively in team environments"
+        ],
+        "communication": [
+            "Demonstrated strong verbal and written communication",
+            "Presented ideas clearly to stakeholders"
+        ],
+        "leadership": [
+            "Led a team/project successfully",
+            "Took initiative in key decisions"
+        ],
+        "python": [
+            "Built projects using Python",
+            "Worked on automation scripts using Python"
+        ],
+        "management": [
+            "Managed project timelines and deliverables",
+            "Handled multiple tasks efficiently"
+        ]
+    }
+
+    for word in missing_keywords:
+        if word in smart_map:
+            suggestions.append(f"👉 Improve '{word}' by adding:")
+            for line in smart_map[word]:
+                suggestions.append(f"   - {line}")
+        else:
+            suggestions.append(f"👉 Consider including '{word}' in your resume")
+
     return suggestions
+
+def highlight_text(resume, job_desc):
+    resume_words = resume.split()
+    job_words = set(job_desc.split())
+
+    highlighted = []
+
+    for word in resume_words:
+        if word in job_words:
+            highlighted.append(f"<span style='color:#00ffcc'>{word}</span>")
+        else:
+            highlighted.append(word)
+
+    return " ".join(highlighted)
