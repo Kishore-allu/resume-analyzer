@@ -26,12 +26,6 @@ body {
     margin-bottom: 20px;
 }
 
-.highlight-box {
-    padding: 15px;
-    border-radius: 10px;
-    background: #111;
-}
-
 .stButton>button {
     background-color: #00ffcc;
     color: black;
@@ -56,26 +50,31 @@ job_description = st.text_area("Enter job description here...")
 # ------------------ BUTTON ------------------
 analyze = st.button("🚀 Analyze Resume")
 
-# ------------------ FUNCTION ------------------
+# ------------------ PDF FUNCTION ------------------
 def extract_text_from_pdf(file):
     reader = PyPDF2.PdfReader(file)
     text = ""
     for page in reader.pages:
-        text += page.extract_text()
+        if page.extract_text():
+            text += page.extract_text()
     return text
 
 # ------------------ MAIN LOGIC ------------------
 if analyze:
     if uploaded_file is not None and job_description:
 
+        # Extract text
         resume_text = extract_text_from_pdf(uploaded_file)
 
+        # Clean text
         clean_resume = clean_text(resume_text)
         clean_job = clean_text(job_description)
 
+        # Score calculation
         score, missing = calculate_match_score(clean_resume, clean_job)
+        ats_score = score * 0.8
 
-        # ------------------ SCORES ------------------
+        # ------------------ MATCH SCORE ------------------
         st.markdown("<div class='section'>", unsafe_allow_html=True)
         st.subheader("📊 Match Score")
         st.progress(int(score))
@@ -83,7 +82,6 @@ if analyze:
         st.markdown("</div>", unsafe_allow_html=True)
 
         # ------------------ ATS SCORE ------------------
-        ats_score = score * 0.8
         st.markdown("<div class='section'>", unsafe_allow_html=True)
         st.subheader("⭐ ATS Score")
         st.progress(int(ats_score))
@@ -107,21 +105,17 @@ if analyze:
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # ------------------ HIGHLIGHTED RESUME ------------------
+        # ------------------ HIGHLIGHT ------------------
         st.markdown("<div class='section'>", unsafe_allow_html=True)
         st.subheader("📄 Resume with Highlights")
 
         highlighted_resume = highlight_text(clean_resume, clean_job)
-
         st.markdown(highlighted_resume, unsafe_allow_html=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-    else:
-        st.warning("⚠️ Please upload resume and paste job description.")
         # ------------------ DOWNLOAD REPORT ------------------
-
-report = f"""
+        report = f"""
 AI Resume Analysis Report
 
 Match Score: {score:.2f}%
@@ -133,12 +127,15 @@ Missing Keywords:
 Suggestions:
 """
 
-for s in suggestions:
-    report += f"\n{s}"
+        for s in suggestions:
+            report += f"\n{s}"
 
-st.download_button(
-    label="📥 Download Report",
-    data=report,
-    file_name="resume_analysis.txt",
-    mime="text/plain"
-)
+        st.download_button(
+            label="📥 Download Report",
+            data=report,
+            file_name="resume_analysis.txt",
+            mime="text/plain"
+        )
+
+    else:
+        st.warning("⚠️ Please upload resume and paste job description.")
